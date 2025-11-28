@@ -86,72 +86,68 @@ export const loginController = async (req, res) => {
     try {
         const { email, phone, password } = req.fields;
 
-        //validation
-        if (!email && !phone || !password) {
+        // Validation
+        if ((!email && !phone) || !password) {
             return res.status(400).send({
                 success: false,
-                message: "Invalid Credential"
+                message: "Invalid Credential",
             });
-        };
+        }
 
-        //find user
+        // Find user
         const user = await userModel.findOne({
-            $or: [
-                { email: email },
-                { phone: phone }
-            ]
+            $or: [{ email }, { phone }],
         });
 
-        //Login validation
         if (!user) {
-            return res.status(404).json({
+            return res.status(404).send({
                 success: false,
-                error: 'User Not Found',
-            })
-        };
+                message: "User Not Found",
+            });
+        }
 
-        //user status validation
+        // Check status
         if (user.status === "Blocked") {
-            return res.status(404).json({
+            return res.status(403).send({
                 success: false,
-                error: "Temporarily Blocked. Contact Admin",
-            })
-        };
+                message: "Temporarily Blocked. Contact Admin",
+            });
+        }
 
-        //compare encrypted password
+        // Compare password
         const match = await comparePassword(password, user.password);
         if (!match) {
-            return res.status(200).send({
+            return res.status(400).send({
                 success: false,
-                message: "Invalid Password"
+                message: "Invalid Password",
             });
-        };
+        }
 
-        //token
-        const token = await JWT.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        // Generate token
+        const token = await JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: "1d",
+        });
 
-        //Send Response
+        // Send response (exclude password)
+        const userData = user.toObject();
+        delete userData.password;
+
         res.status(200).send({
             success: true,
             message: "Login Successful",
-            user: {
-                avatar: user.avatar,
-                name: user.name,
-                email: user.email,
-                phone: user.phone,
-                role: user.role,
-            }, token,
-        })
-
+            user: userData, // now includes createdAt & updatedAt
+            token,
+        });
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).send({
             success: false,
             message: "Login Error",
-            error
-        })
+            error,
+        });
     }
 };
+
 
 //Get all users
 export const getAllUsersController = async (req, res) => {
