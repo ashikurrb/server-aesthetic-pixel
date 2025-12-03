@@ -168,7 +168,7 @@ export const getAllUsersController = async (req, res) => {
     });
 };
 
-//delete user by id
+//delete user
 export const deleteUserController = async (req, res) => {
     try {
         const { id } = req.params;
