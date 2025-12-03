@@ -1,7 +1,7 @@
 import { comparePassword, hashPassword } from '../helpers/authHelpers.js';
+import { deleteFromS3 } from '../config/deleteFromS3.js';
 import userModel from '../model/userModel.js';
 import JWT from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 //declare dotenv
@@ -10,7 +10,7 @@ dotenv.config();
 //Create Controller
 export const createUserController = async (req, res) => {
     try {
-        const { name, email, phone, password, role } = req.fields;
+        const { name, email, phone, password, role } = req.body;
 
         // Validation
         if (!name) return res.status(400).send({
@@ -62,8 +62,17 @@ export const createUserController = async (req, res) => {
         // Encrypt password
         const hashedPassword = await hashPassword(password);
 
+        // Get avatar from S3 + CloudFront
+        let avatarUrl = null;
+
+        if (req.file) {
+            const fileKey = req.file.key;
+
+            // CloudFront URL
+            avatarUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${fileKey}`;
+        }
         // Create user
-        const user = await new userModel({ name, email, phone, role, password: hashedPassword }).save();
+        const user = await new userModel({ name, email, phone, role, password: hashedPassword, avatar: avatarUrl }).save();
 
         res.status(201).send({
             success: true,
@@ -135,7 +144,7 @@ export const loginController = async (req, res) => {
         res.status(200).send({
             success: true,
             message: "Login Successful",
-            user: userData, // now includes createdAt & updatedAt
+            user: userData,
             token,
         });
     } catch (error) {
@@ -171,11 +180,25 @@ export const deleteUserController = async (req, res) => {
                 message: "Authorization Error: Admin cannot be deleted",
             });
         };
+
+        // Delete avatar from S3 if exists
+        if (user.avatar) {
+            // cloudfront
+            const fileKey = user.avatar.replace(
+                `https://${process.env.CLOUDFRONT_DOMAIN}/`,
+                ""
+            );
+
+            await deleteFromS3(fileKey);
+        };
+
+        //find user and delete from db
         await userModel.findByIdAndDelete(id);
         res.status(200).send({
             success: true,
             message: "User and their data deleted successfully",
         })
+
     } catch (error) {
         res.status(500).send({
             success: false,
