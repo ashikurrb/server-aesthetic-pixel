@@ -2,6 +2,7 @@ import { comparePassword, hashPassword } from '../helpers/authHelpers.js';
 import { deleteFromS3 } from '../config/deleteFromS3.js';
 import userModel from '../model/userModel.js';
 import JWT from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 //declare dotenv
@@ -205,5 +206,130 @@ export const deleteUserController = async (req, res) => {
             message: "Deleting user failed",
             error
         })
+    }
+};
+
+//update password by user
+export const updatePasswordByUserController = async (req, res) => {
+    try {
+        const { oldPassword, newPassword, confirmNewPassword } = req.fields;
+
+        const userId = req.user._id;
+        const user = await userModel.findById(userId);
+
+        if (user.status === "Blocked") {
+            return res.status(403).json({
+                success: false,
+                message: "Temporarily Blocked. Contact Admin",
+            });
+        };
+
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({
+                success: false,
+                error: "New password and confirm password do not match",
+            });
+        };
+
+        const updatedData = {};
+
+        if (newPassword && newPassword.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: "Password must be 6 characters or more",
+            });
+        }
+
+        if (newPassword || oldPassword) {
+            if (!oldPassword) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Old password is required to set a new password",
+                });
+            }
+
+            const isMatch = await bcrypt.compare(oldPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Incorrect old password",
+                });
+            }
+
+            if (newPassword) {
+                updatedData.password = await hashPassword(newPassword);
+            }
+        }
+
+        const updatedUser = await userModel
+            .findByIdAndUpdate(userId, updatedData, { new: true })
+            .select("-password");
+
+        return res.status(200).json({
+            success: true,
+            message: "Password Updated Successfully",
+            updatedUser,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Password Updating Error",
+            error: error.message,
+        });
+    }
+};
+
+
+// Update avatar by user
+export const updateAvatarbyUserController = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await userModel.findById(userId);
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No avatar uploaded",
+            });
+        }
+
+        let fileKey =
+            req.file.key ||
+            req.file.filename ||
+            (req.file.location && req.file.location.split(".com/")[1]);
+
+        if (!fileKey) {
+            return res.status(500).json({
+                success: false,
+                message: "File key not found for avatar upload",
+            });
+        }
+
+        const newAvatarUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${fileKey}`;
+
+        if (user.avatar) {
+            const oldKey = user.avatar.replace(
+                `https://${process.env.CLOUDFRONT_DOMAIN}/`,
+                ""
+            );
+            await deleteFromS3(oldKey);
+        }
+
+        user.avatar = newAvatarUrl;
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Avatar updated successfully",
+            avatar: newAvatarUrl,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Avatar Updating Error",
+            error: error.message,
+        });
     }
 };
