@@ -292,7 +292,7 @@ export const updatePasswordByUserController = async (req, res) => {
         if (newPassword !== confirmNewPassword) {
             return res.status(400).json({
                 success: false,
-                error: "New password and confirm password do not match",
+                message: "New password and confirm password do not match",
             });
         }
 
@@ -300,7 +300,7 @@ export const updatePasswordByUserController = async (req, res) => {
         if (newPassword && newPassword.length < 6) {
             return res.status(400).json({
                 success: false,
-                error: "Password must be 6 characters or more",
+                message: "Password must be 6 characters or more",
             });
         }
 
@@ -308,7 +308,7 @@ export const updatePasswordByUserController = async (req, res) => {
         if (!oldPassword) {
             return res.status(400).json({
                 success: false,
-                error: "Old password is required",
+                message: "Old password is required",
             });
         }
 
@@ -316,7 +316,7 @@ export const updatePasswordByUserController = async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({
                 success: false,
-                error: "Incorrect old password",
+                message: "Incorrect old password",
             });
         }
 
