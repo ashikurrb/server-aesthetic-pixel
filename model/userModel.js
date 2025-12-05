@@ -38,6 +38,15 @@ const userSchema = new mongoose.Schema({
         default: 'Active',
         enum: ['Active', 'Blocked']
     },
+
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    }
 }, { timestamps: true });
 
 export default mongoose.model('users', userSchema);

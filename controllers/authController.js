@@ -72,8 +72,13 @@ export const createUserController = async (req, res) => {
             // CloudFront URL
             avatarUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${fileKey}`;
         }
+
+
+        // Set createdBy from logged-in user
+        const createdBy = req.user?._id;
+
         // Create user
-        const user = await new userModel({ name, email, phone, role, password: hashedPassword, avatar: avatarUrl }).save();
+        const user = await new userModel({ name, email, phone, role, password: hashedPassword, avatar: avatarUrl, createdBy }).save();
 
         res.status(201).send({
             success: true,
@@ -105,18 +110,20 @@ export const loginController = async (req, res) => {
         }
 
         // Find user
-        const user = await userModel.findOne({
+        let user = await userModel.findOne({
             $or: [{ email }, { phone }],
-        });
+        })
+            .populate("createdBy" ,"-password")
+            .populate("updatedBy", "-password");
 
         if (!user) {
             return res.status(404).send({
                 success: false,
-                message: "User Not Found",
+                message: "Invalid Credentials",
             });
         }
 
-        // Check status
+        // Status Check
         if (user.status === "Blocked") {
             return res.status(403).send({
                 success: false,
@@ -129,28 +136,31 @@ export const loginController = async (req, res) => {
         if (!match) {
             return res.status(400).send({
                 success: false,
-                message: "Invalid Password",
+                message: "Invalid Credentials",
             });
         }
 
-        // Generate token
-        const token = await JWT.sign({ _id: user._id }, process.env.JWT_SECRET, {
-            expiresIn: "1d",
-        });
+        // Generate JWT
+        const token = JWT.sign(
+            { _id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
 
-        // Send response (exclude password)
+        // Remove password before sending
         const userData = user.toObject();
         delete userData.password;
 
-        res.status(200).send({
+        return res.status(200).send({
             success: true,
             message: "Login Successful",
             user: userData,
             token,
         });
+
     } catch (error) {
         console.error(error);
-        res.status(500).send({
+        return res.status(500).send({
             success: false,
             message: "Login Error",
             error,
@@ -161,7 +171,7 @@ export const loginController = async (req, res) => {
 
 //Get all users
 export const getAllUsersController = async (req, res) => {
-    const allUsers = await userModel.find({}).select("-password").sort({ createdAt: -1 });
+    const allUsers = await userModel.find({}).select("-password").sort({ createdAt: -1 }).populate("createdBy", "name").populate("updatedBy", "name");
     res.status(200).send({
         success: true,
         message: "All Users Fetched",
@@ -260,7 +270,7 @@ export const updatePasswordByUserController = async (req, res) => {
                 updatedData.password = await hashPassword(newPassword);
             }
         }
-
+        updatedData.updatedBy = userId;
         const updatedUser = await userModel
             .findByIdAndUpdate(userId, updatedData, { new: true })
             .select("-password");
@@ -317,6 +327,7 @@ export const updateAvatarbyUserController = async (req, res) => {
         }
 
         user.avatar = newAvatarUrl;
+        user.updatedBy = userId;
         await user.save();
 
         return res.status(200).json({
@@ -326,9 +337,71 @@ export const updateAvatarbyUserController = async (req, res) => {
         });
 
     } catch (error) {
+     console.log("🔥 Avatar Update Error Backend:", error);
+
+    return res.status(500).json({
+        success: false,
+        message: "Avatar Updating Error",
+        error: error.message,
+        stack: error.stack,   // ADD THIS
+    });
+    }
+};
+
+
+export const updateUserByAdminController = async (req, res) => {
+    try {
+        const { name, email, phone, role, status } = req.fields;
+        const { id } = req.params;
+
+        // Check if email/phone already used by another user
+        const existingUser = await userModel.findOne({
+            $and: [
+                { _id: { $ne: id } },
+                {
+                    $or: [
+                        { email: email },
+                        { phone: phone }
+                    ]
+                }
+            ]
+        });
+
+        if (existingUser) {
+            if (existingUser.email === email) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Email already exists"
+                });
+            }
+            if (existingUser.phone === phone) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Phone number already exists"
+                });
+            }
+        }
+
+        // Set updatedBy from logged-in user
+        const updatedBy = req.user?._id;
+        const updatedData = { name, email, phone, role, status, updatedBy };
+
+        const updatedUser = await userModel
+            .findByIdAndUpdate(id, updatedData, { new: true })
+            .select("-password")
+            .populate("createdBy", "name")
+            .populate("updatedBy", "name");
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile Updated Successfully",
+            updatedUser,
+        });
+
+    } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Avatar Updating Error",
+            message: "User Updating Error",
             error: error.message,
         });
     }
