@@ -11,10 +11,25 @@ export const createSubCategoryController = async (req, res) => {
     try {
         const { name, description, parentCategory } = req.fields;
 
-        if (!name || !description || !parentCategory) {
+        //validation
+        if (!name) {
             return res.status(400).send({
                 success: false,
-                message: "Name, Description, and Parent Category are required.",
+                message: "Name is required.",
+            });
+        }
+
+        if (!description) {
+            return res.status(400).send({
+                success: false,
+                message: "Description is required.",
+            });
+        }
+
+        if (!parentCategory) {
+            return res.status(400).send({
+                success: false,
+                message: "Parent Category is required.",
             });
         }
 
@@ -144,11 +159,34 @@ export const getSubCategoriesByParentController = async (req, res) => {
 export const updateSubCategoryController = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, slug, parentCategory } = req.fields;
+        const { name, slug, description, parentCategory } = req.fields;
+
+        //validation
+        if (!name) {
+            return res.status(400).send({
+                success: false,
+                message: "Name is required.",
+            });
+        }
+
+        if (!description) {
+            return res.status(400).send({
+                success: false,
+                message: "Description is required.",
+            });
+        }
+
+        if (!parentCategory) {
+            return res.status(400).send({
+                success: false,
+                message: "Parent Category is required.",
+            });
+        }
+
         const updatedBy = req.user?._id;
         const subCategory = await subCategoryModel.findByIdAndUpdate(
             id,
-            { name, slug, parentCategory, updatedBy },
+            { name, slug, description, parentCategory, updatedBy },
             { new: true }
         );
         res.status(200).send({
