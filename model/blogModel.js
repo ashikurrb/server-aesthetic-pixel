@@ -10,7 +10,6 @@ const blogSchema = new mongoose.Schema(
 
     slug: {
       type: String,
-      required: true,
       unique: true,
       index: true,
       lowercase: true,
@@ -66,11 +65,6 @@ const blogSchema = new mongoose.Schema(
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "users",
-    },
-
-    isDeleted: {
-      type: Boolean,
-      default: false,
     },
   },
   { timestamps: true }

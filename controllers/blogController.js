@@ -1,21 +1,33 @@
+import BlogModel from "../model/blogModel.js";
+import slugify from 'slugify';
+
 export const createBlogController = async (req, res) => {
     try {
-        const { title, slug, category, subCategory, jsonContent, excerpt, metaDescription, status } = req.body;
-        const coverPhoto = req.file ? req.file.location : null;
-        const newBlog = new BlogModel({
+        const { title, slug, category, subCategory, jsonContent, excerpt, metaDescription, status, publishedAt } = req.body;
+
+        // Get coverPhoto from S3 + CloudFront
+        let coverPhotoUrl = null;
+
+        if (req.file) {
+            const fileKey = req.file.key;
+
+            // CloudFront URL
+            coverPhotoUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${fileKey}`;
+        }
+
+        const newBlog = await new BlogModel({
             title,
-            slug,
+            slug: slugify(title),
             category,
             subCategory,
-            coverPhoto,
+            coverPhoto: coverPhotoUrl,
             jsonContent,
             excerpt,
             metaDescription,
             status,
+            publishedAt,
             createdBy: req.user._id,
-        });
-
-        await newBlog.save();
+        }).save();
 
         res.status(201).json({
             success: true,
