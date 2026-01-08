@@ -19,7 +19,7 @@ export const requireSignIn = async (req, res, next) => {
         const token = authHeader.split(" ")[1];
         const decoded = JWT.verify(token, process.env.JWT_SECRET);
 
-        const user = await userModel.findById(decoded._id);
+        const user = await userModel.findById(decoded.userId);
 
         if (!user) {
             return res.status(401).json({
@@ -28,7 +28,7 @@ export const requireSignIn = async (req, res, next) => {
             });
         }
 
-        // TokenVersion Check – this invalidates old tokens immediately
+        // invalidates old tokens immediately
         if ((user.tokenVersion || 0) !== decoded.tokenVersion) {
             return res.status(401).json({
                 success: false,
@@ -37,7 +37,7 @@ export const requireSignIn = async (req, res, next) => {
         }
 
         // If user is blocked, deny access and force logout
-        if (user.status === "Blocked") {
+        if (user.status === "BLOCKED") {
             return res.status(401).json({
                 success: false,
                 message: "Account is blocked",
@@ -55,7 +55,6 @@ export const requireSignIn = async (req, res, next) => {
         });
     }
 };
-
 
 //check if admin
 export const isAdmin = async (req, res, next) => {

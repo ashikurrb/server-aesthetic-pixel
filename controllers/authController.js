@@ -1,100 +1,14 @@
 import { comparePassword, hashPassword } from '../helpers/authHelpers.js';
 import { deleteFromS3 } from '../config/deleteFromS3.js';
 import userModel from '../model/userModel.js';
+import ClientProfile from '../model/clientModel.js';
+import EmployeeProfile from '../model/employeeModel.js';
 import JWT from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 //declare dotenv
 dotenv.config();
-
-//Create Controller
-export const createUserController = async (req, res) => {
-    try {
-        const { name, email, phone, password, role } = req.body;
-
-        // Validation
-        if (!name) return res.status(400).send({
-            success: false, message: "Name is required"
-        });
-        if (!email) return res.status(400).send({
-            success: false, message: "Email is required"
-        });
-        if (!phone) return res.status(400).send({
-            success: false, message: "Phone number is required"
-        });
-        if (!password) return res.status(400).send({
-            success: false, message: "Password is required"
-        });
-        if (!role) return res.status(400).send({
-            success: false, message: "Role is required"
-        });
-
-        // Phone and password length checks
-        if (phone.length !== 11) return res.status(400).send({
-            success: false, message: "Mobile number must be 11 digits"
-        });
-        if (password.length < 6) return res.status(400).send({
-            success: false, message: "Password must be 6 characters or more"
-        });
-
-        // Check if user already exists
-        const existingUser = await userModel.findOne({
-            $or: [
-                { email: email },
-                { phone: phone }
-            ]
-        });
-
-        if (existingUser) {
-            if (existingUser.email === email) {
-                return res.status(409).send({
-                    success: false, message: "Email already exists"
-                });
-            }
-            if (existingUser.phone === phone) {
-                return res.status(409).send({
-                    success: false,
-                    message: "Phone number already exists"
-                });
-            }
-        }
-
-        // Encrypt password
-        const hashedPassword = await hashPassword(password);
-
-        // Get avatar from S3 + CloudFront
-        let avatarUrl = null;
-
-        if (req.file) {
-            const fileKey = req.file.key;
-
-            // CloudFront URL
-            avatarUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${fileKey}`;
-        }
-
-
-        // Set createdBy from logged-in user
-        const createdBy = req.user?._id;
-
-        // Create user
-        const user = await new userModel({ name, email, phone, role, password: hashedPassword, avatar: avatarUrl, createdBy }).save();
-
-        res.status(201).send({
-            success: true,
-            message: "User created successfully!",
-            user,
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send({
-            success: false,
-            message: "User creation error",
-            error: error.message,
-        });
-    }
-};
 
 //Login Controller
 export const loginController = async (req, res) => {
@@ -110,11 +24,9 @@ export const loginController = async (req, res) => {
         }
 
         // Find user
-        let user = await userModel.findOne({
+        const user = await userModel.findOne({
             $or: [{ email }, { phone }],
-        })
-            .populate("createdBy", "-password")
-            .populate("updatedBy", "-password");
+        });
 
         if (!user) {
             return res.status(404).send({
@@ -124,7 +36,7 @@ export const loginController = async (req, res) => {
         }
 
         // Check status
-        if (user.status === "Blocked") {
+        if (user.status === "BLOCKED") {
             return res.status(403).send({
                 success: false,
                 message: "Temporarily blocked. Contact admin.",
@@ -142,7 +54,7 @@ export const loginController = async (req, res) => {
 
         const token = JWT.sign(
             {
-                _id: user._id,
+                userId: user._id,
                 tokenVersion: user.tokenVersion || 0,
             },
             process.env.JWT_SECRET,
@@ -176,13 +88,11 @@ export const loginController = async (req, res) => {
 //Get Logged in user data
 export const loggedInUserController = async (req, res) => {
     try {
-        const me = await userModel
-            .findById(req.user._id)
-            .select("-password")
-            .populate("createdBy", "name")
-            .populate("updatedBy", "name");
+        const userId = req.user._id;
 
-        if (!me) {
+        // Fetch user 
+        const user = await userModel.findById(userId).select("-password");
+        if (!user) {
             return res.status(404).send({
                 success: false,
                 message: "User not found",
@@ -190,24 +100,32 @@ export const loggedInUserController = async (req, res) => {
         }
 
         // Auto logout if user is blocked
-        if (me.status === "Blocked") {
+        if (user.status === "BLOCKED") {
             return res.status(401).send({
                 success: false,
                 message: "Your account is blocked",
             });
         }
 
+        // Fetch profiles
+        const employeeProfile = await EmployeeProfile.findOne({ userId }).populate("createdBy", "name").populate("updatedBy", "name");
+        const clientProfile = await ClientProfile.findOne({ userId }).populate("createdBy", "name").populate("updatedBy", "name");
+
         return res.status(200).send({
             success: true,
             message: "Data fetched successfully",
-            user: me,
+            user,
+            profiles: {
+                employee: employeeProfile || null,
+                client: clientProfile || null,
+            },
         });
-
     } catch (error) {
         console.error(error);
         return res.status(500).send({
             success: false,
             message: "Error fetching user data",
+            error: error.message,
         });
     }
 };
@@ -450,6 +368,82 @@ export const updateUserByAdminController = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "User Updating Error",
+            error: error.message,
+        });
+    }
+};
+
+//create Client controller
+export const createClientController = async (req, res) => {
+    try {
+        const { name, email, phone, password } = req.body;
+
+        // Validation
+        if (!name || !email || !password) {
+            return res.status(400).send({
+                success: false,
+                message: "Name, email, and password are required",
+            });
+        }
+
+        if (phone && phone.length !== 11) {
+            return res.status(400).send({
+                success: false,
+                message: "Phone number must be 11 digits",
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).send({
+                success: false,
+                message: "Password must be at least 6 characters",
+            });
+        }
+
+        // Check if User exists
+        let user = await userModel.findOne({ $or: [{ email }, { phone }] });
+
+        if (user) {
+            // Check if user already has client profile
+            const existingClientProfile = await ClientProfile.findOne({ userId: user._id });
+            if (existingClientProfile) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Email or phone number already exists",
+                });
+            }
+        } else {
+            // Create User
+            const hashedPassword = await hashPassword(password);
+            user = await new userModel({
+                email,
+                phone,
+                password: hashedPassword,
+                status: "ACTIVE",
+                avatar: req.file ? `https://${process.env.CLOUDFRONT_DOMAIN}/${req.file.key}` : null,
+            }).save();
+        }
+
+        // Create ClientProfile
+        const clientProfile = await new ClientProfile({
+            userId: user._id,
+            name,
+            billingAddress,
+            shippingAddress,
+            createdBy: req.user?._id || user._id,
+        }).save();
+
+        res.status(201).send({
+            success: true,
+            message: "Client registered successfully",
+            user,
+            clientProfile,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            success: false,
+            message: "Client registration error",
             error: error.message,
         });
     }
