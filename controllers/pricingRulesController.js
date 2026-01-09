@@ -189,6 +189,7 @@ export const getUnifiedPricingRulesController = async (req, res) => {
 
     res.status(200).json({ success: true, data: productPricing });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       success: false,
       message: "Error in fetching Pricing Data",
