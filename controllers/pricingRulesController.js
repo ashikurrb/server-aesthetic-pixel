@@ -147,10 +147,6 @@ export const getPricingRulesController = async (req, res) => {
     }
 };
 
-//delete pricing rules controller
-export const deletePricingRulesController = async (req, res) => { };
-
-
 //get unified pricing rules  controller
 export const getUnifiedPricingRulesController = async (req, res) => {
   try {
