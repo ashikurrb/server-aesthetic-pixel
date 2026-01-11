@@ -149,50 +149,50 @@ export const getPricingRulesController = async (req, res) => {
 
 //get unified pricing rules  controller
 export const getUnifiedPricingRulesController = async (req, res) => {
-  try {
-    // Fetch all active products
-    const products = await productModel
-      .find({ active: true })
-      .select("name basePrice -_id")
-      .lean();
+//   try {
+//     // Fetch all active products
+//     const products = await productModel
+//       .find({ active: true })
+//       .select("name basePrice -_id")
+//       .lean();
 
-    // Fetch the latest pricing rule
-    const pricing = await pricingRulesModel
-      .findOne()
-      .sort({ createdAt: -1 })
-      .lean();
+//     // Fetch the latest pricing rule
+//     const pricing = await pricingRulesModel
+//       .findOne()
+//       .sort({ createdAt: -1 })
+//       .lean();
 
-    if (!pricing) {
-      return res.status(404).json({
-        success: false,
-        message: "No pricing rules found in the database",
-      });
-    }
+//     if (!pricing) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No pricing rules found in the database",
+//       });
+//     }
 
-    const productPricing = {
-      categories: products.map((p) => ({
-        name: p.name,
-        basePrice: p.basePrice,
-      })),
-      pricingRules: {
-        maxDefaultPhotos: pricing.defaultPhotoCount,
-        extraPhotoPrice: pricing.extraPhotoPrice,
-        discounts: pricing.discountRules.map((d) => ({
-          minQuantity: d.minQty,
-          maxQuantity: d.maxQty,
-          discountPercent: d.discountPercentage,
-        })),
-        maxQuantity: pricing.maxQtyPerOrder,
-        customQuoteMessage: "Contact for custom quote",
-      },
-    };
+//     const productPricing = {
+//       categories: products.map((p) => ({
+//         name: p.name,
+//         basePrice: p.basePrice,
+//       })),
+//       pricingRules: {
+//         maxDefaultPhotos: pricing.defaultPhotoCount,
+//         extraPhotoPrice: pricing.extraPhotoPrice,
+//         discounts: pricing.discountRules.map((d) => ({
+//           minQuantity: d.minQty,
+//           maxQuantity: d.maxQty,
+//           discountPercent: d.discountPercentage,
+//         })),
+//         maxQuantity: pricing.maxQtyPerOrder,
+//         customQuoteMessage: "Contact for custom quote",
+//       },
+//     };
 
-    res.status(200).json({ success: true, data: productPricing });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      success: false,
-      message: "Error in fetching Pricing Data",
-    });
-  }
+//     res.status(200).json({ success: true, data: productPricing });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error in fetching Pricing Data",
+//     });
+//   }
 };
