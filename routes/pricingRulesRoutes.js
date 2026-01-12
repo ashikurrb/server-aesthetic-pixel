@@ -12,9 +12,6 @@ router.post("/create-pricing-rules", requireSignIn, isActive, createPricingRules
 //update Pricing Rules
 router.put("/update-pricing-rules/:id", requireSignIn, isActive, updatePricingRulesController);
 
-//get pricing rules
-router.get("/get-pricing-rules", requireSignIn, isActive, getPricingRulesController);
-
 //Pricing Rules fetch
 router.get("/get-pricing-rules", requireSignIn, isActive, getPricingRulesController);
 
