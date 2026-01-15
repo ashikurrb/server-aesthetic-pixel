@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice A5</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    @page {
+      size: A5 portrait;
+      margin: 0;
+    }
+    
+    body {
+      background-color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      font-size: 10px; /* 10px is optimal for A5 readability */
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      margin: 0;
+      padding: 0;
+      line-height: 1.3;
+    }
+
+    /* Fixed Dimension Container for A5 (148mm x 210mm) */
+    .a5-container {
+      width: 148mm;
+      min-height: 210mm; /* A5 Height */
+      margin: 0 auto;
+      padding: 12mm; /* Balanced padding */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      background-color: white; 
+    }
+    
+    /* Solid borders for the fashion look */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      table-layout: fixed; /* Crucial for A5 to prevent overflow */
+    }
+    
+    th, td {
+      border-right: 1px solid #000;
+      border-bottom: 1px solid #000;
+      padding: 6px 4px; /* Tighter padding for A5 */
+      vertical-align: middle;
+      word-wrap: break-word; /* Prevents long text from breaking layout */
+    }
+    
+    th:last-child, td:last-child {
+      border-right: none;
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Utility to keep sections together */
+    .no-break {
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="a5-container">
+
+    <div class="flex justify-between items-start mb-6">
+      <div class="text-[70px] leading-[0.8] font-serif italic">
+     <img src="https://i.ibb.co.com/Kxw53TX9/logo.png" alt="Aesthetic Pixel Studio LLC" class="w-32 h-auto"/>
+      </div>
+      
+      <div>
+        <h1 class="text-3xl font-bold uppercase tracking-tight">INVOICE</h1>
+      </div>
+    </div>
+
+    <div class="flex justify-between items-start mb-6 text-[10px]">
+      
+      <div class="w-1/2 pr-2">
+        <h3 class="font-bold uppercase mb-1.5 tracking-wider text-[9px] text-gray-800">BILLED TO:</h3>
+        
+        <div class="space-y-0.5">
+          <p class="font-bold text-xs"><%= buyer %></p>
+          <p><%= order.createdBy.phone %></p>
+          <p class="break-words"><%= order.createdBy.email %></p>
+        </div>
+      </div>
+
+      <div class="w-1/2 text-right">
+        <div class="space-y-0.5">
+          <p><span class="text-gray-500">Invoice No.</span> <span class="font-bold"><%= order._id.toString().slice(-5).toUpperCase() %></span></p>
+          <p><span class="text-gray-500">Order ID:</span> <span class="font-bold text-[9px]"><%= order._id %></span></p>
+          <p><span class="text-gray-500">Date:</span> <span class="font-bold"><%= new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) %></span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <table class="text-[9px]">
+        <thead>
+          <tr class="bg-white text-left">
+            <th class="font-bold text-center w-[8%]">#</th>
+            <th class="font-bold w-[35%]">Items</th> <th class="font-bold text-center w-[10%]">Qty</th>
+            <th class="font-bold text-center w-[12%]">Photo</th>
+            <th class="font-bold text-center w-[17%]">Unit Price</th>
+            <th class="font-bold text-center w-[18%]">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% order.orderItems.forEach((item, index) => { %>
+            <tr>
+              <td class="text-center"><%= index + 1 %></td>
+              <td><%= item.name %></td>
+              <td class="text-center"><%= item.quantity %></td>
+              <td class="text-center"><%= item.photos %></td>
+              <td class="text-center"><span class="text-[8px] mr-1">BDT</span><%= item.unitPrice %></td>
+              <td class="text-center font-bold"><span class="text-[8px] mr-1">BDT</span><%= item.totalProductPrice %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-end mb-8 no-break">
+      <div class="w-[55%]">
+        <div class="flex justify-between mb-1">
+          <span class="font-bold text-[10px]">Subtotal</span>
+          <span class="font-bold text-[10px]">BDT <%= order.subTotal %></span>
+        </div>
+        <div class="flex justify-between mb-2 text-[10px] text-gray-500">
+          <span>Discount</span>
+          <span>(-) BDT <%= order.discountedAmount %></span>
+        </div>
+        
+        <div class="h-px bg-black w-full mb-2"></div>
+        
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-sm">Total</span>
+          <span class="font-bold text-sm">BDT <%= order.finalPrice %></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-auto no-break">
+      <div class="flex justify-between items-end">
+        
+        <div class="w-[55%]">
+          <h2 class="text-3xl font-bold text-gray-300 uppercase mb-4 tracking-tight"><%= order.status %></h2>
+          
+          <h3 class="font-bold uppercase text-[9px] tracking-wider mb-2">PAYMENT INFORMATION</h3>
+          
+          <div class="text-[9px] leading-snug">
+             <% order.paymentDetails.forEach(payment => { %>
+                <div class="mb-1.5">
+                   <div class="flex">
+                     <span class="font-bold w-16">Method:</span>
+                     <span><%= payment.method %></span>
+                   </div>
+                   <% if(payment.accNo) { %>
+                   <div class="flex">
+                     <span class="font-bold w-16">Account:</span>
+                     <span><%= payment.accNo %></span>
+                   </div>
+                   <% } %>
+                   <div class="flex">
+                     <span class="font-bold w-16">Trx ID:</span>
+                     <span><%= payment.trxId %></span>
+                   </div>
+                </div>
+             <% }) %>
+          </div>
+        </div>
+
+        <div class="text-right w-[45%]">
+          <h3 class="font-bold text-sm mb-1 leading-tight">Aesthetic Pixel Studio LLC</h3>
+          <div class="text-[9px] leading-relaxed text-gray-600">
+            1115, Shelctech Rubynur (Level 3)<br>
+            Mirpur-10, Dhaka 1216<br>
+            aestheticpixelstudiollc@gmail.com
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
