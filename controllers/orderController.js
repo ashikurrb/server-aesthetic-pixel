@@ -173,7 +173,7 @@ export const dashboardDataController = async (req, res) => {
   try {
     const totalOrders = await orderModel.countDocuments();
     const pendingOrders = await orderModel.countDocuments({ status: "Pending" });
-    const completedOrders = await orderModel.countDocuments({ status: "Approved" });
+    const acceptedOrders = await orderModel.countDocuments({ status: "Accepted" });
     const cancelledOrders = await orderModel.countDocuments({ status: "Cancelled" });
 
     res.status(200).send({
@@ -182,7 +182,7 @@ export const dashboardDataController = async (req, res) => {
       data: {
         totalOrders,
         pendingOrders,
-        completedOrders,
+        acceptedOrders,
         cancelledOrders,
       },
     });

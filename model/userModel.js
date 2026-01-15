@@ -28,15 +28,13 @@ const userSchema = new mongoose.Schema(
       enum: ["Active", "Blocked"],
       default: "Active",
     },
-    profile: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "clientProfile",
-    },
+
     userType: {
       type: String,
       trim: true,
       required: true,
     },
+
     tokenVersion: {
       type: Number,
       default: 0,
