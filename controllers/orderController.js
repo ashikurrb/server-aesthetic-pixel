@@ -139,7 +139,7 @@ export const getOrderInvoiceController = async (req, res) => {
       join(process.cwd(), "templates", "invoice.ejs"),
       {
         order,
-        buyer: clientProfile?.name || "N/A",
+        buyer: clientProfile?.name,
       }
     );
 
