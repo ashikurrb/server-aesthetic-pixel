@@ -235,6 +235,7 @@ export const dashboardDataController = async (req, res) => {
     const pendingOrders = await orderModel.countDocuments({ status: "Pending" });
     const acceptedOrders = await orderModel.countDocuments({ status: "Accepted" });
     const cancelledOrders = await orderModel.countDocuments({ status: "Cancelled" });
+    const refundedOrders = await orderModel.countDocuments({ status: "Refunded" });
 
     res.status(200).send({
       success: true,
@@ -244,6 +245,7 @@ export const dashboardDataController = async (req, res) => {
         pendingOrders,
         acceptedOrders,
         cancelledOrders,
+        refundedOrders,
       },
     });
   } catch (error) {
@@ -262,6 +264,7 @@ export const userDashboardDataController = async (req, res) => {
     const pendingOrders = await orderModel.countDocuments({ status: "Pending", createdBy: req.user._id });
     const acceptedOrders = await orderModel.countDocuments({ status: "Accepted", createdBy: req.user._id });
     const cancelledOrders = await orderModel.countDocuments({ status: "Cancelled", createdBy: req.user._id });
+    const refundedOrders = await orderModel.countDocuments({ status: "Refunded", createdBy: req.user._id });
 
     res.status(200).send({
       success: true,
@@ -271,6 +274,7 @@ export const userDashboardDataController = async (req, res) => {
         pendingOrders,
         acceptedOrders,
         cancelledOrders,
+        refundedOrders,
       },
     });
   } catch (error) {
