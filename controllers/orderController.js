@@ -56,7 +56,7 @@ export const createOrderController = async (req, res) => {
     }
 
     const orderId = `APS${String(nextNumber).padStart(3, "0")}`;
-    const invoiceId = orderId; 
+    const invoiceId = orderId;
 
     const createdBy = req.user._id;
 
@@ -106,6 +106,52 @@ export const getOrdersByUserController = async (req, res) => {
   }
 };
 
+
+//get all order for admin
+export const getAllOrderController = async (req, res) => {
+  try {
+    const orders = await orderModel.find({}).populate('orderItems.productId').sort({ createdAt: -1 });
+    res.status(200).send({
+      success: true,
+      message: "All Orders fetched successfully",
+      orders,
+    });
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Error getting orders",
+      error: error.message,
+    });
+  }
+};
+
+
+//order status update by admin
+export const updateOrderStatusController = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    const order = await orderModel.findByIdAndUpdate(
+      orderId,
+      { status },
+      { new: true }
+    );
+    res.status(200).send({
+      success: true,
+      message: "Order status updated successfully",
+      order,
+    });
+
+  } catch (error) {
+    res.status(500).send({
+      success: false,
+      message: "Error updating order status",
+      error: error.message,
+    });
+  }
+};
+
+//invoice generation for user
 export const getOrderInvoiceController = async (req, res) => {
   try {
     const { orderId } = req.params;
