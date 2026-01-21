@@ -86,7 +86,6 @@ export const createOrderController = async (req, res) => {
   }
 };
 
-
 //get orders details by user
 export const getOrdersByUserController = async (req, res) => {
   try {
@@ -112,6 +111,7 @@ export const getAllOrderController = async (req, res) => {
       .find({})
       .populate('orderItems.productId')
       .populate("createdBy", "name email phone")
+      .populate("updatedBy", "name email phone")
       .sort({ createdAt: -1 });
     res.status(200).send({
       success: true,
@@ -132,17 +132,19 @@ export const updateOrderStatusController = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
+    const updatedBy = req.user._id; 
+
     const order = await orderModel.findByIdAndUpdate(
       orderId,
-      { status },
+      { status, updatedBy },
       { new: true }
-    );
+    ).populate('updatedBy', 'name email'); 
+
     res.status(200).send({
       success: true,
       message: "Order status updated successfully",
       order,
     });
-
   } catch (error) {
     res.status(500).send({
       success: false,

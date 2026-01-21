@@ -50,7 +50,9 @@ const userSchema = new mongoose.Schema(
     },
     employeeId: {
       type: String,
-      unique: true
+      unique: true,
+      sparse:true,
+      trim: true,
     },
     tokenVersion: {
       type: Number,
