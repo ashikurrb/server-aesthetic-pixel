@@ -1,5 +1,4 @@
 import orderModel from "../model/orderModel.js";
-import clientModel from "../model/clientModel.js";
 import puppeteer from "puppeteer";
 import ejs from "ejs";
 import path from "path";

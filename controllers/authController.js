@@ -1,5 +1,6 @@
 import { comparePassword, hashPassword } from '../helpers/authHelpers.js';
 import { deleteFromS3 } from '../config/deleteFromS3.js';
+import userModel from '../model/userModel.js';
 import JWT from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
