@@ -106,11 +106,14 @@ export const getOrdersByUserController = async (req, res) => {
   }
 };
 
-
 //get all order for admin
 export const getAllOrderController = async (req, res) => {
   try {
-    const orders = await orderModel.find({}).populate('orderItems.productId').sort({ createdAt: -1 });
+    const orders = await orderModel
+      .find({})
+      .populate('orderItems.productId')
+      .populate("createdBy", "name email phone")
+      .sort({ createdAt: -1 });
     res.status(200).send({
       success: true,
       message: "All Orders fetched successfully",
@@ -156,7 +159,7 @@ export const getOrderInvoiceController = async (req, res) => {
     const { orderId } = req.params;
     const order = await orderModel
       .findById(orderId)
-      .populate("createdBy", "name email phone userType");
+      .populate("createdBy", "name email phone");
 
     if (!order) {
       return res.status(404).json({
