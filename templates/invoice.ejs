@@ -86,7 +86,7 @@
       <div class="w-1/2 pr-2">
         <h3 class="font-bold uppercase mb-1.5 tracking-wider text-[9px] text-gray-800">BILLED TO:</h3>
         <div class="space-y-0.5">
-          <p class="font-bold text-xs"><%= buyer %></p>
+          <p class="font-bold text-xs"><%= order.createdBy.name %></p>
           <p><%= order.createdBy.phone %></p>
           <p class="break-words"><%= order.createdBy.email %></p>
         </div>

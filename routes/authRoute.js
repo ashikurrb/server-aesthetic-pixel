@@ -1,14 +1,14 @@
 import express from 'express';
 import formidable from 'express-formidable';
 import avatarUpload from '../config/multerS3Config.js';
-import { deleteUserController, getAllUsersController, loginController, updatePasswordByUserController, updateAvatarbyUserController, updateUserByAdminController, loggedInUserDataController, createClientController, employeeLoginController } from '../controllers/authController.js';
+import { deleteUserController, loginController, updatePasswordByUserController, updateAvatarbyUserController, updateUserByAdminController, loggedInUserDataController, createClientController, employeeLoginController, getAllEmployeesController, getAllClientsController, createEmployeeController } from '../controllers/authController.js';
 import { requireSignIn, isAdmin, isModerator, isClient, isActive } from '../middlewares/authMiddleware.js';
 
 //declare router
 const router = express.Router();
 
-// //Create User Route
-// router.post("/create-user", requireSignIn, isAdmin, avatarUpload.single("avatar"), createUserController);
+//Create User Route
+router.post("/create-user", requireSignIn, isAdmin, avatarUpload.single("avatar"), createEmployeeController);
 
 
 //Create Client Route
@@ -23,8 +23,11 @@ router.post("/employee-login", formidable(), employeeLoginController);
 //get logged in user
 router.get("/me", requireSignIn, isActive, loggedInUserDataController);
 
-//Get All Users
-router.get("/all-users", requireSignIn, isActive, getAllUsersController);
+//Get All Employee
+router.get("/all-employees", requireSignIn, isActive,isModerator, getAllEmployeesController);
+
+//get all clients
+router.get("/all-clients", requireSignIn, isActive,  getAllClientsController);
 
 //update password by user
 router.put("/update-password", requireSignIn, isActive, formidable(), updatePasswordByUserController);

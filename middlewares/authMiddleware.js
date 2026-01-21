@@ -81,7 +81,7 @@ export const isClient = async (req, res, next) => {
 //check if admin
 export const isAdmin = async (req, res, next) => {
     try {
-        const user = await userModel.findById(req.user._id)
+        const user = await userModel.findById(req.user._id);
         if (user.role !== "Admin") {
             return res.status(401).send({
                 success: false,
@@ -121,7 +121,6 @@ export const isModerator = async (req, res, next) => {
         });
     }
 };
-
 
 // Check if user is active or blocked
 export const isActive = async (req, res, next) => {

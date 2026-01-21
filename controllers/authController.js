@@ -1,8 +1,5 @@
 import { comparePassword, hashPassword } from '../helpers/authHelpers.js';
 import { deleteFromS3 } from '../config/deleteFromS3.js';
-import userModel from '../model/userModel.js';
-import ClientProfile from '../model/clientModel.js';
-import EmployeeProfile from '../model/employeeModel.js';
 import JWT from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
@@ -93,7 +90,7 @@ export const loginController = async (req, res) => {
     }
 };
 
-//Login Controller
+//Employee Login Controller
 export const employeeLoginController = async (req, res) => {
     try {
         const { email, phone, password } = req.fields;
@@ -198,29 +195,10 @@ export const loggedInUserDataController = async (req, res) => {
             });
         }
 
-        // Initialize profile variables
-        let employeeProfile = null;
-        let clientProfile = null;
-
-        // Fetch profiles based on userType
-        if (user.userType === "Employee") {
-            employeeProfile = await EmployeeProfile.findOne({ userId })
-                .populate("createdBy", "name")
-                .populate("updatedBy", "name");
-        } else if (user.userType === "Client") {
-            clientProfile = await ClientProfile.findOne({ userId })
-                .populate("createdBy", "name")
-                .populate("updatedBy", "name");
-        }
-
         return res.status(200).send({
             success: true,
             message: "Data fetched successfully",
-            user,
-            profiles: {
-                employee: employeeProfile,
-                client: clientProfile,
-            },
+            user
         });
     } catch (error) {
         console.error(error);
@@ -232,19 +210,52 @@ export const loggedInUserDataController = async (req, res) => {
     }
 };
 
+//Get all employees
+export const getAllClientsController = async (req, res) => {
+  try {
+    const users = await userModel
+      .find({ userType: "Client" })
+      .select("-password")
+      .populate("createdBy", "name")
+      .populate("updatedBy", "name")
+      .sort({ createdAt: -1 });
 
-//Get all users
-export const getAllUsersController = async (req, res) => {
-    const allUsers = await userModel.find({})
-        .select("-password")
-        .sort({ createdAt: -1 })
-        .populate("createdBy", "name")
-        .populate("updatedBy", "name");
-    res.status(200).send({
-        success: true,
-        message: "All Users Fetched",
-        users: allUsers,
+    res.status(200).json({
+      success: true,
+      message: "All Clients Fetched",
+      users,
     });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch clients",
+      error: error.message,
+    });
+  }
+};
+
+//Get all employees
+export const getAllEmployeesController = async (req, res) => {
+  try {
+    const users = await userModel
+      .find({ userType: "Employee" })
+      .select("-password")
+      .populate("createdBy", "name")
+      .populate("updatedBy", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "All Employees Fetched",
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch employees",
+      error: error.message,
+    });
+  }
 };
 
 //delete user
@@ -253,7 +264,7 @@ export const deleteUserController = async (req, res) => {
         const { id } = req.params;
 
         const user = await userModel.findById(id);
-        if (user.role === "Admin") {
+        if (user.userType === "Employee" && user.role === "Admin") {
             return res.status(403).send({
                 success: false,
                 message: "Authorization Error: Admin cannot be deleted",
@@ -508,7 +519,7 @@ export const createClientController = async (req, res) => {
 
         if (user) {
             // Check if user already has client profile
-            const existingClientProfile = await ClientProfile.findOne({ userId: user._id });
+            const existingClientProfile = await userModel.findOne({ _id: user._id });
             if (existingClientProfile) {
                 return res.status(409).send({
                     success: false,
@@ -521,32 +532,104 @@ export const createClientController = async (req, res) => {
          // Create User
             const hashedPassword = await hashPassword(password);
             user = await new userModel({
+                name,
                 email,
                 phone,
                 password: hashedPassword,
                 userType: "Client",
                 avatar: req.file ? `https://${process.env.CLOUDFRONT_DOMAIN}/${req.file.key}` : null,
             }).save();
-        }
-
-        // Create ClientProfile
-        const clientProfile = await new ClientProfile({
-            userId: user._id,
-            name,
-            createdBy: req.user?._id || user._id,
-        }).save();
+        };
 
         res.status(201).send({
             success: true,
             message: "Registration successfull",
             user,
-            clientProfile,
         });
     } catch (error) {
         console.error(error);
         res.status(500).send({
             success: false,
             message: "Registration Error",
+            error: error.message,
+        });
+    }
+};
+
+//create Employee controller
+export const createEmployeeController = async (req, res) => {
+    try {
+        const { name, email, phone, role, employeeId, password } = req.body;
+
+        // Validation
+        if (!name || !email || !password) {
+            return res.status(400).send({
+                success: false,
+                message: "Name, email, and password are required",
+            });
+        }
+
+        if (phone && phone.length !== 11) {
+            return res.status(400).send({
+                success: false,
+                message: "Phone number must be 11 digits",
+            });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).send({
+                success: false,
+                message: "Password must be at least 6 characters",
+            });
+        }
+
+        if(employeeId){
+            const existingEmployeeId = await userModel.findOne({ employeeId });
+            if (existingEmployeeId) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Employee ID already exists",
+                });
+            }
+        }
+
+        // Check if User exists
+        let user = await userModel.findOne({ $or: [{ email }, { phone }] });
+
+        if (user) {
+            // Check if user already has client profile
+            const existingEmployeeProfile = await userModel.findOne({ _id: user._id });
+            if (existingEmployeeProfile) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Email or phone number already exists",
+                });
+            }
+        } else {
+         // Create User
+            const hashedPassword = await hashPassword(password);
+            user = await new userModel({
+                name,
+                email,
+                phone,
+                role,
+                employeeId,
+                password: hashedPassword,
+                userType: "Employee",
+                avatar: req.file ? `https://${process.env.CLOUDFRONT_DOMAIN}/${req.file.key}` : null,
+            }).save();
+        };
+
+        res.status(201).send({
+            success: true,
+            message: "User created successfully",
+            user,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            success: false,
+            message: "User creation Error",
             error: error.message,
         });
     }

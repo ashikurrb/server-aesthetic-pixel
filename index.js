@@ -37,7 +37,7 @@ app.use("/api/v1/pricing", pricingRulesRoutes);
 
 //rest api
 app.get("/", (req, res) => {
-    res.send("<h1>Aesthetic Pixel Sever is Running</h1>");
+    res.send("<h1>Aesthetic Pixel Server is Running</h1>");
 });
 
 //PORT

@@ -125,7 +125,6 @@ export const getAllOrderController = async (req, res) => {
   }
 };
 
-
 //order status update by admin
 export const updateOrderStatusController = async (req, res) => {
   try {
@@ -157,7 +156,7 @@ export const getOrderInvoiceController = async (req, res) => {
     const { orderId } = req.params;
     const order = await orderModel
       .findById(orderId)
-      .populate("createdBy", "email phone userType");
+      .populate("createdBy", "name email phone userType");
 
     if (!order) {
       return res.status(404).json({
@@ -173,19 +172,10 @@ export const getOrderInvoiceController = async (req, res) => {
       });
     }
 
-    // createdBy is USER
-    const userId = order.createdBy._id;
-
-    // fetch client profile using userId
-    const clientProfile = await clientModel
-      .findOne({ userId })
-      .select("name");
-
     const html = await ejs.renderFile(
       join(process.cwd(), "templates", "invoice.ejs"),
       {
-        order,
-        buyer: clientProfile?.name,
+        order
       }
     );
 
