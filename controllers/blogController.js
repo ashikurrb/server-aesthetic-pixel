@@ -44,7 +44,7 @@ export const createBlogController = async (req, res) => {
     }
 };
 
-//get all blogs controller
+//get published blogs controller
 export const getAllBlogsController = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -80,7 +80,48 @@ export const getAllBlogsController = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Error fetching blogs",
-            error,
+            error: error.message,
+        });
+    }
+};
+
+//get published blogs controller
+export const getPublishedBlogsController = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 9;
+        const skip = (page - 1) * limit;
+
+        const blogs = await blogModel.find({status: 'Published'})
+            .select("-jsonContent")
+            .populate("createdBy", "name email")
+            .populate("category", "name")
+            .populate("subCategory", "name")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const totalBlogs = await blogModel.countDocuments({status: 'Published'});
+
+        //send response
+        res.status(200).json({
+            success: true,
+            message: "Blogs fetched successfully",
+            blogs,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalBlogs / limit),
+                totalBlogs,
+                hasNextPage: page * limit < totalBlogs,
+                hasPrevPage: page > 1
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Error fetching blogs",
+            error: error.message,
         });
     }
 };

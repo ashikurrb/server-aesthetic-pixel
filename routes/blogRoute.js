@@ -2,7 +2,7 @@ import express from 'express';
 import formidable from 'express-formidable';
 import avatarUpload from '../config/multerS3Config.js';
 import { requireSignIn, isAdmin, isModerator, isActive } from '../middlewares/authMiddleware.js';
-import { createBlogController, deleteBlogController, getAllBlogsController, getSingleBlogController } from '../controllers/blogController.js';
+import { createBlogController, deleteBlogController, getAllBlogsController, getPublishedBlogsController, getSingleBlogController } from '../controllers/blogController.js';
 
 //declare router
 const router = express.Router();
@@ -12,6 +12,9 @@ router.post("/create-blog", requireSignIn, isModerator, avatarUpload.single("cov
 
 //Blog Routes
 router.get("/get-all-blogs", getAllBlogsController);
+
+//Blog Routes
+router.get("/get-published-blogs", getPublishedBlogsController);
 
 //get single blog
 router.get("/get-blog/:slug", getSingleBlogController);
