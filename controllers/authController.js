@@ -432,7 +432,7 @@ export const updateAvatarbyUserController = async (req, res) => {
 
 export const updateUserByAdminController = async (req, res) => {
     try {
-        const { name, email, phone, role,employeeId, status } = req.fields;
+        const { name, email, phone, role, employeeId, status } = req.fields;
         const { id } = req.params;
 
         // Check if email/phone, employeeID already used by another user
@@ -602,15 +602,14 @@ export const createEmployeeController = async (req, res) => {
         }
 
         // Check if User exists
-        let user = await userModel.findOne({ $or: [{ email }, { phone }] });
-
+        let user = await userModel.findOne({ $or: [{ email }, { phone }, { employeeId }] });
+        const createdBy = req.user?._id;
         if (user) {
-            // Check if user already has client profile
             const existingEmployeeProfile = await userModel.findOne({ _id: user._id });
             if (existingEmployeeProfile) {
                 return res.status(409).send({
                     success: false,
-                    message: "Email or phone number already exists",
+                    message: "Email, phone number, or employee ID already exists",
                 });
             }
         } else {
@@ -624,6 +623,7 @@ export const createEmployeeController = async (req, res) => {
                 employeeId,
                 password: hashedPassword,
                 userType: "Employee",
+                createdBy,
                 avatar: req.file ? `https://${process.env.CLOUDFRONT_DOMAIN}/${req.file.key}` : null,
             }).save();
         };
