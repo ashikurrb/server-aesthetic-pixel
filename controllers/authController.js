@@ -432,17 +432,18 @@ export const updateAvatarbyUserController = async (req, res) => {
 
 export const updateUserByAdminController = async (req, res) => {
     try {
-        const { name, email, phone, role, status } = req.fields;
+        const { name, email, phone, role,employeeId, status } = req.fields;
         const { id } = req.params;
 
-        // Check if email/phone already used by another user
+        // Check if email/phone, employeeID already used by another user
         const existingUser = await userModel.findOne({
             $and: [
                 { _id: { $ne: id } },
                 {
                     $or: [
                         { email: email },
-                        { phone: phone }
+                        { phone: phone },
+                        { employeeId: employeeId }
                     ]
                 }
             ]
@@ -461,11 +462,17 @@ export const updateUserByAdminController = async (req, res) => {
                     message: "Phone number already exists"
                 });
             }
+            if (existingUser.employeeId === employeeId) {
+                return res.status(409).send({
+                    success: false,
+                    message: "Employee ID already exists"
+                });
+            }
         }
 
         // Set updatedBy from logged-in user
         const updatedBy = req.user?._id;
-        const updatedData = { name, email, phone, role, status, updatedBy };
+        const updatedData = { name, email, phone, role, employeeId, status, updatedBy };
 
         const updatedUser = await userModel
             .findByIdAndUpdate(id, updatedData, { new: true })
